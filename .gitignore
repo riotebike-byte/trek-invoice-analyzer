@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv
+instance/
+.webassets-cache
+.DS_Store
+uploads/
+*.pdf
+test_*.py

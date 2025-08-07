@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trek Invoice SKU Analyzer - PDF Fatura Analizi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .header h1 {
+            color: #1e3c72;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 968px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .card h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #2a5298;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .upload-area:hover {
+            background: #e8f0fe;
+            transform: translateY(-2px);
+        }
+        
+        .upload-area.dragover {
+            background: #d1e7ff;
+            border-color: #1e3c72;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .upload-area p {
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .file-types {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .file-type {
+            background: #e8f0fe;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #2a5298;
+            font-weight: 500;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .sku-search {
+            margin-bottom: 30px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-box input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2a5298;
+            display: block;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .product-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .product-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #1e3c72;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .product-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .product-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .sku-badge {
+            background: #e8f0fe;
+            color: #2a5298;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-weight: 500;
+        }
+        
+        .turkish-desc {
+            background: #d4edda;
+            color: #155724;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        
+        .not-found {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 6px 12px;
+            border-radius: 5px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2a5298;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .download-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .download-btn {
+            background: #28a745;
+            padding: 15px 40px;
+            font-size: 18px;
+        }
+        
+        .download-btn:hover {
+            background: #218838;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .info-box {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .trek-logo {
+            width: 40px;
+            height: 40px;
+            background: #e74c3c;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .product-link {
+            color: #2a5298;
+            text-decoration: none;
+        }
+        
+        .product-link:hover {
+            text-decoration: underline;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-icon {
+            color: #28a745;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span class="trek-logo">T</span>
+                Trek Invoice SKU Analyzer
+            </h1>
+            <p class="subtitle">PDF faturalarından SKU kodlarını çıkarır ve Trek ürünlerini otomatik tanımlayarak Türkçe açıklamalar ekler</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="card">
+                <h2>📤 Fatura Yükle</h2>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <p style="font-size: 18px; font-weight: 500;">PDF faturanızı buraya sürükleyin</p>
+                    <p>veya tıklayarak seçin</p>
+                    <div class="file-types">
+                        <span class="file-type">PDF</span>
+                        <span class="file-type">Excel</span>
+                        <span class="file-type">CSV</span>
+                    </div>
+                    <input type="file" id="fileInput" accept=".pdf,.csv,.xlsx,.xls">
+                </div>
+                
+                <div class="info-box" style="margin-top: 20px;">
+                    <strong>💡 Nasıl Çalışır?</strong>
+                    <ul class="feature-list" style="margin-top: 10px;">
+                        <li>
+                            <span class="feature-icon">✓</span>
+                            <span>PDF faturayı yükleyin</span>
+                        </li>
+                        <li>
+                            <span class="feature-icon">✓</span>
+                            <span>SKU kodları otomatik çıkarılır</span>
+                        </li>
+                        <li>
+                            <span class="feature-icon">✓</span>
+                            <span>Trek ürünleri tanımlanır</span>
+                        </li>
+                        <li>
+                            <span class="feature-icon">✓</span>
+                            <span>Türkçe açıklamalar eklenir</span>
+                        </li>
+                        <li>
+                            <span class="feature-icon">✓</span>
+                            <span>Excel olarak indirebilirsiniz</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="error" id="errorMessage"></div>
+            </div>
+            
+            <div class="card">
+                <h2>🔍 Manuel SKU Arama</h2>
+                
+                <div class="sku-search">
+                    <div class="search-box">
+                        <input type="text" id="skuInput" placeholder="SKU kodunu girin (örn: 5274852)">
+                        <button class="btn" onclick="searchSKU()">Ara</button>
+                    </div>
+                </div>
+                
+                <div id="manualSearchResult"></div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="color: #2a5298; font-weight: 500;">Fatura analiz ediliyor...</p>
+                    <p style="color: #666; font-size: 0.9em; margin-top: 10px;">SKU kodları çıkarılıyor ve Trek'te aranıyor...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="results card" id="results" style="margin-top: 30px;">
+            <h2>📊 Analiz Sonuçları</h2>
+            
+            <div class="stats-grid" id="stats"></div>
+            
+            <div id="tableContainer"></div>
+            
+            <div class="download-section" id="downloadSection" style="display: none;">
+                <p style="margin-bottom: 15px; color: #666;">Analiz tamamlandı! Sonuçları Excel formatında indirebilirsiniz.</p>
+                <button class="btn download-btn" id="downloadBtn">
+                    💾 Excel Olarak İndir
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        // Dosya yükleme
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+        });
+        
+        // Drag & Drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                uploadFile(file);
+            }
+        });
+        
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            loading.classList.add('show');
+            results.classList.remove('show');
+            errorMessage.classList.remove('show');
+            
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.classList.remove('show');
+                
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    displayResults(data);
+                }
+            })
+            .catch(error => {
+                loading.classList.remove('show');
+                showError('Dosya yüklenirken bir hata oluştu: ' + error);
+            });
+        }
+        
+        function showError(message) {
+            errorMessage.innerHTML = '❌ ' + message;
+            errorMessage.classList.add('show');
+        }
+        
+        function displayResults(data) {
+            results.classList.add('show');
+            
+            // İstatistikler
+            let foundCount = 0;
+            let notFoundCount = 0;
+            
+            data.data.forEach(item => {
+                if (item['Ürün Adı'] && item['Ürün Adı'] !== 'Bulunamadı') {
+                    foundCount++;
+                } else {
+                    notFoundCount++;
+                }
+            });
+            
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card">
+                    <span class="stat-number">${data.total_rows}</span>
+                    <span class="stat-label">Toplam SKU</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${foundCount}</span>
+                    <span class="stat-label">Bulunan Ürün</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${notFoundCount}</span>
+                    <span class="stat-label">Bulunamayan</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">${data.file_type}</span>
+                    <span class="stat-label">Dosya Tipi</span>
+                </div>
+            `;
+            
+            // Tablo
+            let tableHtml = '<table class="product-table"><thead><tr>';
+            tableHtml += '<th>SKU</th>';
+            tableHtml += '<th>Ürün Adı</th>';
+            tableHtml += '<th>Kategori</th>';
+            tableHtml += '<th>Türkçe Tanım</th>';
+            tableHtml += '</tr></thead><tbody>';
+            
+            data.data.forEach(item => {
+                tableHtml += '<tr>';
+                tableHtml += `<td><span class="sku-badge">${item.SKU || ''}</span></td>`;
+                
+                if (item['Ürün Adı'] === 'Bulunamadı') {
+                    tableHtml += `<td><span class="not-found">Bulunamadı</span></td>`;
+                } else if (item.URL) {
+                    tableHtml += `<td><a href="${item.URL}" target="_blank" class="product-link">${item['Ürün Adı'] || ''}</a></td>`;
+                } else {
+                    tableHtml += `<td>${item['Ürün Adı'] || ''}</td>`;
+                }
+                
+                tableHtml += `<td>${item.Kategori || '-'}</td>`;
+                tableHtml += `<td><span class="turkish-desc">${item['Türkçe Tanım'] || ''}</span></td>`;
+                tableHtml += '</tr>';
+            });
+            
+            tableHtml += '</tbody></table>';
+            document.getElementById('tableContainer').innerHTML = tableHtml;
+            
+            // İndirme butonu
+            if (data.output_file) {
+                const downloadSection = document.getElementById('downloadSection');
+                const downloadBtn = document.getElementById('downloadBtn');
+                
+                downloadSection.style.display = 'block';
+                downloadBtn.onclick = () => {
+                    window.location.href = `/download/${data.output_file}`;
+                };
+            }
+        }
+        
+        function searchSKU() {
+            const sku = document.getElementById('skuInput').value.trim();
+            
+            if (!sku) {
+                alert('Lütfen bir SKU kodu girin');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('manualSearchResult');
+            resultDiv.innerHTML = '<div class="loading show"><div class="spinner"></div><p>Aranıyor...</p></div>';
+            
+            fetch('/search_sku', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ sku: sku })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const product = data.product;
+                    resultDiv.innerHTML = `
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                            <h4 style="color: #1e3c72; margin-bottom: 15px;">Ürün Bulundu!</h4>
+                            <table class="product-table">
+                                <tr>
+                                    <td><strong>SKU:</strong></td>
+                                    <td><span class="sku-badge">${product.sku}</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ürün:</strong></td>
+                                    <td>${product.title}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Kategori:</strong></td>
+                                    <td>${product.category || '-'}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Türkçe:</strong></td>
+                                    <td><span class="turkish-desc">${product.turkish}</span></td>
+                                </tr>
+                                ${product.url ? `
+                                <tr>
+                                    <td><strong>Link:</strong></td>
+                                    <td><a href="${product.url}" target="_blank" class="product-link">Trek'te Görüntüle →</a></td>
+                                </tr>
+                                ` : ''}
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 10px; margin-top: 20px;">
+                            ❌ Ürün bulunamadı. SKU kodunu kontrol edip tekrar deneyin.
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `
+                    <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 10px; margin-top: 20px;">
+                        ❌ Arama sırasında hata oluştu: ${error}
+                    </div>
+                `;
+            });
+        }
+        
+        // Enter tuşu ile arama
+        document.getElementById('skuInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchSKU();
+            }
+        });
+    </script>
+</body>
+</html>
